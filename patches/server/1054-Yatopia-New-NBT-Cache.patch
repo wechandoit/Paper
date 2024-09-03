@@ -1,0 +1,137 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Ethan Chan <ethanchan7981@gmail.com>
+Date: Tue, 3 Sep 2024 04:51:15 -0400
+Subject: [PATCH] Yatopia New NBT Cache
+
+
+diff --git a/src/main/java/net/minecraft/nbt/NBTCache.java b/src/main/java/net/minecraft/nbt/NBTCache.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..702f7d17f5b63fa814e31316a9e049372f829fe4
+--- /dev/null
++++ b/src/main/java/net/minecraft/nbt/NBTCache.java
+@@ -0,0 +1,32 @@
++package net.minecraft.nbt;
++
++import java.nio.file.Path;
++
++import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenCustomHashMap;
++import net.minecraft.server.MinecraftServer;
++
++public class NBTCache extends Object2ObjectLinkedOpenCustomHashMap<Path, CompoundTag> {
++    
++    public NBTCache() {
++        super (100, 0.75F, new Strategy<Path>() {
++
++            @Override
++            public int hashCode(Path k) {
++                return k.hashCode();
++            }
++
++            @Override
++            public boolean equals(Path k, Path k1) {
++                return k.equals(k1);
++            }
++        });
++    }
++
++    @Override
++    public CompoundTag put(Path k, CompoundTag v) {
++        if (this.size() > MinecraftServer.getServer().getPlayerCount()) {
++            this.removeLast();
++        }
++        return super.putAndMoveToFirst(k, v);
++    }
++}
+diff --git a/src/main/java/net/minecraft/world/level/storage/PlayerDataStorage.java b/src/main/java/net/minecraft/world/level/storage/PlayerDataStorage.java
+index b148cf247acdd36f856d0495cde4cc5ad32b5a2f..f95d9481d3f487ee21cefc4727b5e7d50c7e3d91 100644
+--- a/src/main/java/net/minecraft/world/level/storage/PlayerDataStorage.java
++++ b/src/main/java/net/minecraft/world/level/storage/PlayerDataStorage.java
+@@ -2,6 +2,9 @@ package net.minecraft.world.level.storage;
+ 
+ import com.mojang.datafixers.DataFixer;
+ import com.mojang.logging.LogUtils;
++
++import io.papermc.paper.util.MCUtil;
++
+ import java.io.File;
+ import java.nio.file.Files;
+ import java.nio.file.LinkOption;
+@@ -12,6 +15,7 @@ import java.time.format.DateTimeFormatter;
+ import java.util.Optional;
+ import net.minecraft.Util;
+ import net.minecraft.nbt.CompoundTag;
++import net.minecraft.nbt.NBTCache;
+ import net.minecraft.nbt.NbtAccounter;
+ import net.minecraft.nbt.NbtIo;
+ import net.minecraft.nbt.NbtUtils;
+@@ -27,6 +31,7 @@ public class PlayerDataStorage {
+     private final File playerDir;
+     protected final DataFixer fixerUpper;
+     private static final DateTimeFormatter FORMATTER = FileNameDateFormatter.create();
++    private final NBTCache dataCache = new NBTCache();
+ 
+     public PlayerDataStorage(LevelStorageSource.LevelStorageAccess session, DataFixer dataFixer) {
+         this.fixerUpper = dataFixer;
+@@ -41,11 +46,21 @@ public class PlayerDataStorage {
+             Path path = this.playerDir.toPath();
+             Path path1 = Files.createTempFile(path, player.getStringUUID() + "-", ".dat");
+ 
+-            NbtIo.writeCompressed(nbttagcompound, path1);
+-            Path path2 = path.resolve(player.getStringUUID() + ".dat");
+-            Path path3 = path.resolve(player.getStringUUID() + ".dat_old");
+-
+-            Util.safeReplaceFile(path2, path1, path3);
++            Runnable task = () -> {
++                try {
++                    NbtIo.writeCompressed(nbttagcompound, path1);
++                    Path path2 = path.resolve(player.getStringUUID() + ".dat");
++                    Path path3 = path.resolve(player.getStringUUID() + ".dat_old");
++                
++                    Util.safeReplaceFile(path2, path1, path3);
++                } catch (Exception exception) {
++                    PlayerDataStorage.LOGGER.error("Failed to save player data for {}", player.getScoreboardName(), exception); // Paper
++                }
++            };
++            synchronized (this.dataCache) {
++                this.dataCache.put(path1, nbttagcompound);
++            }
++            MCUtil.asyncExecutor.execute(task);
+         } catch (Exception exception) {
+             PlayerDataStorage.LOGGER.warn("Failed to save player data for {}", player.getScoreboardName(), exception); // Paper - Print exception
+         }
+@@ -74,13 +89,23 @@ public class PlayerDataStorage {
+     private Optional<CompoundTag> load(String name, String s1, String s) { // name, uuid, extension
+         // CraftBukkit end
+         File file = this.playerDir;
++        Path path = this.playerDir.toPath();
+         // String s1 = entityhuman.getStringUUID(); // CraftBukkit - used above
+         File file1 = new File(file, s1 + s);
++        Path path1 = path.resolve(s1 + s);
+         // Spigot Start
+         boolean usingWrongFile = false;
+-        if ( org.bukkit.Bukkit.getOnlineMode() && !file1.exists() ) // Paper - Check online mode first
++        boolean normalFile = file1.exists() && file1.isFile();
++        CompoundTag playerData;
++        synchronized (this.dataCache) {
++            playerData = this.dataCache.get(path1);
++        }
++        if (playerData == null && org.bukkit.Bukkit.getOnlineMode() && !normalFile ) // Paper - Check online mode first
+         {
+             file1 = new File( file, java.util.UUID.nameUUIDFromBytes( ( "OfflinePlayer:" + name ).getBytes( java.nio.charset.StandardCharsets.UTF_8 ) ).toString() + s );
++            synchronized (this.dataCache) {
++                playerData = this.dataCache.get(path1);
++            }
+             if ( file1.exists() )
+             {
+                 usingWrongFile = true;
+@@ -89,7 +114,9 @@ public class PlayerDataStorage {
+         }
+         // Spigot End
+ 
+-        if (file1.exists() && file1.isFile()) {
++        if (playerData != null) {
++            return (Optional<CompoundTag>) Optional.of(playerData);
++        } else if (normalFile) {
+             try {
+                 // Spigot Start
+                 Optional<CompoundTag> optional = Optional.of(NbtIo.readCompressed(file1.toPath(), NbtAccounter.unlimitedHeap()));
