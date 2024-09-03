@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Ethan Chan <ethanchan7981@gmail.com>
+Date: Thu, 22 Aug 2024 00:05:10 -0400
+Subject: [PATCH] Lithium Fast Util
+
+
+diff --git a/src/main/java/net/minecraft/core/Direction.java b/src/main/java/net/minecraft/core/Direction.java
+index f15dd2ccb99ade10ac1e49b63e6f4080bd39b3c9..808f87066fe955e0b8c48f0f806b79b19591f776 100644
+--- a/src/main/java/net/minecraft/core/Direction.java
++++ b/src/main/java/net/minecraft/core/Direction.java
+@@ -366,7 +366,7 @@ public enum Direction implements StringRepresentable, ca.spottedleaf.moonrise.pa
+     }
+ 
+     public static Direction getRandom(RandomSource random) {
+-        return Util.getRandom(VALUES, random);
++        return VALUES[random.nextInt(VALUES.length)]; // lithium - fastutil
+     }
+ 
+     public static Direction getNearest(double x, double y, double z) {
+@@ -594,7 +594,7 @@ public enum Direction implements StringRepresentable, ca.spottedleaf.moonrise.pa
+     // Paper start - optimise collisions
+     static {
+         for (final Direction direction : VALUES) {
+-            ((Direction)(Object)direction).opposite = from3DDataValue(((Direction)(Object)direction).oppositeIndex);
++            ((Direction)(Object)direction).opposite = VALUES[direction.oppositeIndex]; // lithium - fast util
+             ((Direction)(Object)direction).rotation = ((Direction)(Object)direction).getRotationUncached();
+             ((Direction)(Object)direction).id = it.unimi.dsi.fastutil.HashCommon.murmurHash3(it.unimi.dsi.fastutil.HashCommon.murmurHash3(direction.ordinal() + RANDOM_OFFSET) + RANDOM_OFFSET);
+             ((Direction)(Object)direction).stepX = ((Direction)(Object)direction).normal.getX();
+diff --git a/src/main/java/net/minecraft/world/phys/AABB.java b/src/main/java/net/minecraft/world/phys/AABB.java
+index 29123f3a2f211c08d1a9ccf62ca9bc9822f90111..9a17ef9766389c00958c385a64c9fa19fac1be59 100644
+--- a/src/main/java/net/minecraft/world/phys/AABB.java
++++ b/src/main/java/net/minecraft/world/phys/AABB.java
+@@ -17,6 +17,15 @@ public class AABB {
+     public final double maxY;
+     public final double maxZ;
+ 
++    // lithium - fastutil
++    static {
++        assert Direction.Axis.X.ordinal() == 0;
++        assert Direction.Axis.Y.ordinal() == 1;
++        assert Direction.Axis.Z.ordinal() == 2;
++        assert Direction.Axis.values().length == 3;
++    }
++    // end
++
+     public AABB(double x1, double y1, double z1, double x2, double y2, double z2) {
+         this.minX = Math.min(x1, x2);
+         this.minY = Math.min(y1, y2);
+@@ -85,11 +94,33 @@ public class AABB {
+     }
+ 
+     public double min(Direction.Axis axis) {
+-        return axis.choose(this.minX, this.minY, this.minZ);
++        // lithium - fastutil
++        switch(axis.ordinal()) {
++            case 0: // X
++                return this.minX;
++            case 1: // Y
++                return this.minY;
++            case 2: // Z
++                return this.minZ;
++        }
++
++        throw new IllegalArgumentException();
++        // end
+     }
+ 
+     public double max(Direction.Axis axis) {
+-        return axis.choose(this.maxX, this.maxY, this.maxZ);
++        // lithium - fastutil
++        switch(axis.ordinal()) {
++            case 0: // X
++                return this.maxX;
++            case 1: // Y
++                return this.maxY;
++            case 2: // Z
++                return this.maxZ;
++        }
++
++        throw new IllegalArgumentException();
++        // end
+     }
+ 
+     @Override
