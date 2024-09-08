@@ -1,0 +1,36 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Ethan Chan <ethanchan7981@gmail.com>
+Date: Sun, 8 Sep 2024 12:17:21 -0400
+Subject: [PATCH] Lithium store gamerules in fastutil hashmap
+
+
+diff --git a/src/main/java/net/minecraft/world/level/GameRules.java b/src/main/java/net/minecraft/world/level/GameRules.java
+index 89e327bc3a45879fe68887c7aadb077f31a770eb..2f3ed72eb673757b425783fffc64d3aa0ca73faf 100644
+--- a/src/main/java/net/minecraft/world/level/GameRules.java
++++ b/src/main/java/net/minecraft/world/level/GameRules.java
+@@ -30,6 +30,7 @@ import net.minecraft.server.MinecraftServer;
+ import net.minecraft.server.level.ServerLevel;
+ import net.minecraft.server.level.ServerPlayer;
+ import org.slf4j.Logger;
++import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
+ 
+ public class GameRules {
+ 
+@@ -142,14 +143,14 @@ public class GameRules {
+ 
+     public GameRules() {
+         // Paper start - Perf: Use array for gamerule storage
+-        this((Map) GameRules.GAME_RULE_TYPES.entrySet().stream().collect(ImmutableMap.toImmutableMap(Entry::getKey, (entry) -> {
++        this(new Object2ObjectOpenHashMap<>((Map) GameRules.GAME_RULE_TYPES.entrySet().stream().collect(ImmutableMap.toImmutableMap(Entry::getKey, (entry) -> {
+             return ((GameRules.Type) entry.getValue()).createRule();
+-        })));
++        }))));
+         // Paper end - Perf: Use array for gamerule storage
+     }
+ 
+     private GameRules(Map<GameRules.Key<?>, GameRules.Value<?>> rules) {
+-        this.rules = rules;
++        this.rules = new Object2ObjectOpenHashMap<>(rules);
+ 
+         // Paper start - Perf: Use array for gamerule storage
+         int arraySize = rules.keySet().stream().mapToInt(key -> key.gameRuleIndex).max().orElse(-1) + 1;

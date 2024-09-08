@@ -1,0 +1,27 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Ethan Chan <ethanchan7981@gmail.com>
+Date: Sun, 8 Sep 2024 12:16:07 -0400
+Subject: [PATCH] Faster speed checks
+
+
+diff --git a/src/main/java/net/minecraft/world/entity/Entity.java b/src/main/java/net/minecraft/world/entity/Entity.java
+index e0827d8bb3fa17d4f590a5342ff41a514f623e68..73442c6a3c5c6b428d9199303964e12905d684fd 100644
+--- a/src/main/java/net/minecraft/world/entity/Entity.java
++++ b/src/main/java/net/minecraft/world/entity/Entity.java
+@@ -1270,7 +1270,15 @@ public abstract class Entity implements SyncedDataHolder, Nameable, EntityAccess
+                 }
+ 
+                 this.tryCheckInsideBlocks();
+-                float f = this.getBlockSpeedFactor();
++                float f;
++                if (this.getDeltaMovement().x == 0 && this.getDeltaMovement().z == 0)
++                {
++                    f = 1;
++                }
++                else
++                {
++                    f = this.getBlockSpeedFactor();
++                }
+ 
+                 this.setDeltaMovement(this.getDeltaMovement().multiply((double) f, 1.0D, (double) f));
+                 if (this.level().getBlockStatesIfLoaded(this.getBoundingBox().deflate(1.0E-6D)).noneMatch((iblockdata2) -> {
