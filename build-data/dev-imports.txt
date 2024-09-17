@@ -13,3 +13,5 @@
 #     mc_data dimension_type/overworld.json
 #
 
+mc_data dimension_type/overworld.json
+mc_data dimension_type/overworld_caves.json

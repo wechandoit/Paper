@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Ethan Chan <ethanchan7981@gmail.com>
+Date: Tue, 17 Sep 2024 03:03:27 -0400
+Subject: [PATCH] Change max build height
+
+
+diff --git a/src/main/resources/data/minecraft/dimension_type/overworld.json b/src/main/resources/data/minecraft/dimension_type/overworld.json
+index bea16894da3cd946ae749afa8ac1676189d8bf89..4a799dba18adf4a0b9e54cac96e4e15b6c27e18c 100644
+--- a/src/main/resources/data/minecraft/dimension_type/overworld.json
++++ b/src/main/resources/data/minecraft/dimension_type/overworld.json
+@@ -6,9 +6,9 @@
+   "has_ceiling": false,
+   "has_raids": true,
+   "has_skylight": true,
+-  "height": 384,
++  "height": 1088,
+   "infiniburn": "#minecraft:infiniburn_overworld",
+-  "logical_height": 384,
++  "logical_height": 1088,
+   "min_y": -64,
+   "monster_spawn_block_light_limit": 0,
+   "monster_spawn_light_level": {
+@@ -20,4 +20,4 @@
+   "piglin_safe": false,
+   "respawn_anchor_works": false,
+   "ultrawarm": false
+-}
++}
+\ No newline at end of file
+diff --git a/src/main/resources/data/minecraft/dimension_type/overworld_caves.json b/src/main/resources/data/minecraft/dimension_type/overworld_caves.json
+index 9e2b39ba31df59e5ee2304f32ded14ede6e1606a..2dd389c978c92f6cc487b9bff5b899416daaddaa 100644
+--- a/src/main/resources/data/minecraft/dimension_type/overworld_caves.json
++++ b/src/main/resources/data/minecraft/dimension_type/overworld_caves.json
+@@ -6,9 +6,9 @@
+   "has_ceiling": true,
+   "has_raids": true,
+   "has_skylight": true,
+-  "height": 384,
++  "height": 1088,
+   "infiniburn": "#minecraft:infiniburn_overworld",
+-  "logical_height": 384,
++  "logical_height": 1088,
+   "min_y": -64,
+   "monster_spawn_block_light_limit": 0,
+   "monster_spawn_light_level": {
+@@ -20,4 +20,4 @@
+   "piglin_safe": false,
+   "respawn_anchor_works": false,
+   "ultrawarm": false
+-}
++}
+\ No newline at end of file
